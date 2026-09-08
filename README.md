@@ -88,7 +88,7 @@ sudo TELEGRAM_API_ID=123456 TELEGRAM_API_HASH=abcdef... ./deploy/install-bot-api
 Compiles `tdlib/telegram-bot-api` from source (10–25 min, ~2 GB RAM — add swap on
 a 1 GB box), creates a service account, writes the credentials to
 `/etc/telegram-bot-api.env` with mode 600, and starts the unit bound to
-127.0.0.1. Then set in `.env`:
+127.0.0.1. Verified against Bot API 10.3. Then set in `.env`:
 
 ```ini
 API_BASE_URL=http://127.0.0.1:8081
@@ -96,8 +96,15 @@ API_DIR=/var/lib/telegram-bot-api
 MAX_ARCHIVE_MB=2000
 ```
 
-`deploy/unzipper-bot.service` runs the bot itself. The bot's user needs read
-access to `API_DIR`, so it joins the `telegram-bot-api` group.
+`deploy/unzipper-bot.service` runs the bot itself.
+
+**Permissions are the step that silently breaks this.** The server creates its
+per-token directory as `0750` and each downloaded file as `0640`, so a bot
+running as an unrelated user can traverse `/var/lib/telegram-bot-api` and then
+read nothing. Run the bot as `telegram-bot-api`, as root, or put its user in that
+group — the shipped unit does the last one via
+`SupplementaryGroups=telegram-bot-api`. Get this wrong and the bot silently
+degrades to the 20 MB HTTP path.
 
 Never expose port 8081 publicly: bot tokens travel in its URLs.
 

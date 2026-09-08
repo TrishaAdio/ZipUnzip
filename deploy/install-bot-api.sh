@@ -146,10 +146,12 @@ ${bold}${green}Local Bot API server is up.${off}
        API_DIR=$DATA_DIR
        MAX_ARCHIVE_MB=2000
 
-  ${bold}3.${off} The bot process needs read access to $DATA_DIR. Either run it as
-     $SERVICE_USER, or add its user to that group:
+  ${bold}3.${off} Give the bot read access to $DATA_DIR. This is not optional:
+     the server creates per-token directories as 0750 and downloaded files as
+     0640, so "other" gets nothing. Run the bot as $SERVICE_USER, as
+     root, or add its user to that group:
 
-       usermod -aG $SERVICE_USER <bot-user>
+       usermod -aG $SERVICE_USER <bot-user>   # then restart the bot
 
   ${dim}logs:${off}    journalctl -u telegram-bot-api -f
   ${dim}restart:${off} systemctl restart telegram-bot-api
