@@ -1,0 +1,62 @@
+name: unzipper
+
+# Run from the repository root:
+#   cp .env.example .env          # fill BOT_TOKEN
+#   export TELEGRAM_API_ID=... TELEGRAM_API_HASH=...
+#   docker compose -f deploy/docker-compose.yml up -d --build
+#
+# The two services share the `api-data` volume at the SAME path (/data). That is
+# the whole trick behind large archives: the API server writes the incoming file
+# there and the bot reads it in place instead of downloading it over HTTP.
+
+services:
+  bot-api:
+    image: aiogram/telegram-bot-api:latest
+    restart: unless-stopped
+    environment:
+      TELEGRAM_API_ID: ${TELEGRAM_API_ID:?set TELEGRAM_API_ID from my.telegram.org}
+      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH:?set TELEGRAM_API_HASH from my.telegram.org}
+      # --local lifts the limits to 2000 MB and makes getFile return a real path.
+      TELEGRAM_LOCAL: 1
+      TELEGRAM_WORK_DIR: /data
+      # Same filesystem as the work dir, so finished uploads are renamed, not copied.
+      # Drop this line if your kernel/volume setup refuses to create /data/tmp.
+      TELEGRAM_TEMP_DIR: /data/tmp
+      TELEGRAM_HTTP_PORT: 8081
+      TELEGRAM_MAX_CONNECTIONS: 100
+      TELEGRAM_VERBOSITY: 1
+    volumes:
+      - api-data:/data
+    ports:
+      # Never expose this publicly: the port speaks bot tokens in cleartext URLs.
+      - "127.0.0.1:8081:8081"
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 2 bash -c '</dev/tcp/127.0.0.1/8081' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  bot:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      API_BASE_URL: http://bot-api:8081
+      API_DIR: /data
+      WORK_DIR: /var/tmp/unzipper
+      LOG_COLOR: always
+    volumes:
+      - api-data:/data
+      - work:/var/tmp/unzipper
+    depends_on:
+      bot-api:
+        condition: service_healthy
+    stop_grace_period: 30s
+
+volumes:
+  api-data:
+  work:

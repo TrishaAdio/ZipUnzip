@@ -1,0 +1,31 @@
+[Unit]
+Description=Telegram unzipper bot
+After=network-online.target telegram-bot-api.service
+Wants=network-online.target
+# Comment out if you run against api.telegram.org.
+Requires=telegram-bot-api.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/unzipper-bot
+EnvironmentFile=/opt/unzipper-bot/.env
+# Reading files written by the API server needs group membership:
+#   usermod -aG telegram-bot-api unzipper
+User=unzipper
+Group=unzipper
+SupplementaryGroups=telegram-bot-api
+ExecStart=/opt/unzipper-bot/.venv/bin/python -m bot
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+TimeoutStopSec=30
+LimitNOFILE=16384
+
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=false
+ReadWritePaths=/var/tmp/unzipper /var/lib/telegram-bot-api
+
+[Install]
+WantedBy=multi-user.target
