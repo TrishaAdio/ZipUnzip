@@ -35,14 +35,27 @@ filesystem path, so a 2 GB archive costs no download at all.
 ## Quick start
 
 ```bash
-git clone <this repo> && cd unzipper-bot
-python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt
-cp .env.example .env      # set BOT_TOKEN
-.venv/bin/python -m bot
+git clone https://github.com/TrishaAdio/ZipUnzip.git && cd ZipUnzip
+python3 setup.py
 ```
 
-With `API_BASE_URL` empty it runs against the cloud API and warns about the
-20 MB cap on startup. Requires Python 3.11+.
+That's the whole install. `setup.py` finds a Python 3.11+ interpreter (searching
+`PATH` and pyenv if the one you invoked is older), builds `.venv`, installs the
+requirements, creates `.env` from the example, asks for your `BOT_TOKEN` if the
+terminal is interactive, and launches the bot. Re-running is cheap — the venv is
+reused and pip is skipped unless `requirements.txt` changed.
+
+```bash
+python3 setup.py --no-run                 # set up, don't launch
+python3 setup.py --selftest               # run the offline checks first
+python3 setup.py --token 123456:AA...     # non-interactive token
+python3 setup.py --recreate --upgrade     # rebuild the venv, upgrade packages
+python3 setup.py --dev                    # also install ruff
+```
+
+It is a bootstrapper, not a packaging file — `pip install .` is refused on
+purpose. With `API_BASE_URL` unset the bot runs against the cloud API and warns
+about the 20 MB ceiling on startup.
 
 ## Running with a local Bot API server
 
@@ -149,6 +162,7 @@ Telegram is picky, so the sender adapts rather than failing:
 ## Layout
 
 ```
+setup.py              bootstrap: interpreter, venv, deps, .env, launch
 bot/
   __main__.py         entrypoint, session wiring, startup checks
   config.py           env parsing

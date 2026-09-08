@@ -9,7 +9,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.client.telegram import TelegramAPIServer
 from aiogram.enums import ParseMode
-from aiogram.exceptions import TelegramNetworkError, TelegramUnauthorizedError
+from aiogram.exceptions import AiogramError, TelegramNetworkError, TelegramUnauthorizedError
 from aiohttp import ClientError
 from dotenv import load_dotenv
 
@@ -63,6 +63,12 @@ async def _serve(bot: Bot, config: Config) -> None:
         log.error("cannot reach %s (%s)", endpoint, exc)
         if config.local_api:
             log.error("is telegram-bot-api running? systemctl status telegram-bot-api")
+        return
+    except AiogramError as exc:
+        # Something answered, but it does not speak Bot API: wrong port, a proxy,
+        # or an unrelated service sitting on 8081.
+        log.error("%s is not a Bot API server (%s)", endpoint, type(exc).__name__)
+        log.debug("%s", exc)
         return
 
     store = Store(config.max_concurrent_jobs)
